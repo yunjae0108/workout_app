@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 번핏 v1.4 - 클라우드 버전</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex justify-center">
+
+    <div class="w-full max-w-md bg-slate-900 min-h-screen flex flex-col justify-between p-4 shadow-xl relative overflow-hidden">
+        
+        <div id="view-workout" class="flex-1 flex flex-col justify-between">
+            <header class="flex justify-between items-center py-2 border-b border-slate-800">
+                <div class="flex-1 mr-2">
+                    <p class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">Today's Workout</p>
+                    <input type="text" id="workout-title-input" value="💪 가슴 & 삼두" class="bg-transparent text-xl font-bold text-white border-b border-transparent hover:border-slate-600 focus:border-indigo-500 focus:outline-none w-full py-0.5">
+                </div>
+                <button onclick="saveWorkout()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 shrink-0">
+                    완료
+                </button>
+            </header>
+
+            <main class="flex-1 py-4 space-y-4 overflow-y-auto">
+                <div class="flex gap-2 items-center">
+                    <select id="exercise-selector" onchange="onExerciseChange()" class="flex-1 bg-slate-800 text-white border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </select>
+                    <button onclick="toggleNewExerciseModal(true)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl border border-slate-700 flex items-center justify-center">
+                        <span class="material-icons text-xl">add</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
+                    <button onclick="importByExercise()" class="bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 py-2.5 rounded-xl flex items-center justify-center gap-1 transition-all">
+                        <span class="material-icons text-sm">download</span> 이 운동만 Import
+                    </button>
+                    <button onclick="toggleImportDateModal(true)" class="bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 py-2.5 rounded-xl flex items-center justify-center gap-1 transition-all">
+                        <span class="material-icons text-sm">history</span> 날짜 통째로 Import
+                    </button>
+                </div>
+
+                <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50 space-y-3 exercise-card" id="current-exercise-card" data-exercise-name="">
+                    <div class="flex justify-between items-center">
+                        <h2 id="card-exercise-name" class="text-base font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>로딩 중...
+                        </h2>
+                        <span id="card-exercise-category" class="text-xs text-slate-400">-</span>
+                    </div>
+
+                    <div class="grid grid-cols-4 text-center text-xs font-medium text-slate-400 py-1 border-b border-slate-700/50">
+                        <div>세트</div><div>이전 기록</div><div>kg</div><div>Reps</div>
+                    </div>
+
+                    <div class="space-y-2 set-list" id="dynamic-set-list"></div>
+
+                    <button onclick="addSet()" class="w-full bg-slate-700/40 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2 rounded-xl transition-all border border-dashed border-slate-600/50 flex items-center justify-center gap-1">
+                        <span class="material-icons text-sm">add</span> 세트 추가
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <div id="import-date-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+            <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-1">📅 과거 날짜 선택</h3>
+                <input type="date" id="import-target-date" class="w-full bg-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="flex gap-2 justify-end pt-1">
+                    <button onclick="toggleImportDateModal(false)" class="px-3 py-1.5 bg-slate-700 rounded-lg text-xs font-semibold text-slate-300">취소</button>
+                    <button onclick="importByDateSubmit()" class="px-3 py-1.5 bg-emerald-600 rounded-lg text-xs font-semibold text-white">가져오기</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="new-exercise-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+            <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
+                <h3 class="text-base font-bold text-white">🏋️‍♂️ 새 운동 종목 추가</h3>
+                <div class="space-y-3">
+                    <div>
+                        <input type="text" id="new-ex-name" placeholder="예: 덤벨 숄더프레스" class="w-full bg-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <select id="new-ex-category" class="w-full bg-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="가슴">가슴</option><option value="등">등</option><option value="하체">하체</option><option value="어깨">어깨</option><option value="팔">팔</option><option value="복근">복근</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-2 justify-end pt-2">
+                    <button onclick="toggleNewExerciseModal(false)" class="px-3 py-1.5 bg-slate-700 rounded-lg text-xs font-semibold text-slate-300">취소</button>
+                    <button onclick="addNewExerciseSubmit()" class="px-3 py-1.5 bg-indigo-600 rounded-lg text-xs font-semibold text-white">등록</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-calendar" class="hidden flex-1 flex flex-col pt-2 animate-fade-in space-y-4">
+            <header class="py-2 border-b border-slate-800"><h1 class="text-xl font-bold">📅 운동 캘린더</h1></header>
+            <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-center mb-4 px-2"><h2 id="calendar-month-year" class="text-base font-bold text-white">-</h2></div>
+                <div class="grid grid-cols-7 text-center text-xs font-semibold text-slate-400 mb-2">
+                    <div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div>
+                </div>
+                <div id="calendar-days" class="grid grid-cols-7 text-center gap-y-3 text-sm font-medium"></div>
+            </div>
+            <div id="calendar-detail-panel" class="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/30 min-h-[100px] flex flex-col justify-center items-center text-slate-400 text-xs">
+                <span class="material-icons text-xl mb-1 text-slate-600">touch_app</span>날짜를 선택하세요.
+            </div>
+        </div>
+
+        <div id="view-chart" class="hidden flex-1 flex flex-col pt-2 animate-fade-in">
+            <header class="py-2 border-b border-slate-800 mb-4"><h1 class="text-xl font-bold">📈 1RM 분석</h1></header>
+            <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50 space-y-4">
+                <h3 id="chart-exercise-title" class="text-sm font-bold text-indigo-400">-</h3>
+                <div class="relative w-full h-64"><canvas id="oneRmMixChart"></canvas></div>
+            </div>
+        </div>
+
+        <nav class="flex justify-around items-center py-3 bg-slate-850 border-t border-slate-800 text-slate-400 rounded-t-2xl mt-4">
+            <button onclick="switchView('workout')" id="nav-workout" class="flex flex-col items-center gap-1 text-indigo-400">
+                <span class="material-icons">edit_note</span><span class="text-[10px] font-medium">일지</span>
+            </button>
+            <button onclick="switchView('calendar')" id="nav-calendar" class="flex flex-col items-center gap-1 hover:text-slate-200">
+                <span class="material-icons">calendar_month</span><span class="text-[10px] font-medium">캘린더</span>
+            </button>
+            <button onclick="switchView('chart')" id="nav-chart" class="flex flex-col items-center gap-1 hover:text-slate-200">
+                <span class="material-icons">trending_up</span><span class="text-[10px] font-medium">분석 (1RM)</span>
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        let setCcunt = 0;
+        let myChartInstance = null;
+
+        window.onload = async function() {
+            await loadExerciseSelector();
+            resetSetRows();
+        };
+
+        function resetSetRows() {
+            setCcunt = 0;
+            document.getElementById('dynamic-set-list').innerHTML = '';
+            addSet();
+        }
+
+        async function loadExerciseSelector() {
+            try {
+                const response = await fetch('/api/exercises'); // 도메인 제거 및 상대 경로 처리
+                const list = await response.json();
+                const selector = document.getElementById('exercise-selector');
+                selector.innerHTML = '';
+                list.forEach(ex => {
+                    const option = document.createElement('option');
+                    option.value = ex.name; option.innerText = `[${ex.category}] ${ex.name}`;
+                    option.setAttribute('data-category', ex.category);
+                    selector.appendChild(option);
+                });
+                if(list.length > 0) onExerciseChange();
+            } catch (error) { console.error(error); }
+        }
+
+        function onExerciseChange() {
+            const selector = document.getElementById('exercise-selector');
+            if (!selector.value) return;
+            const selectedName = selector.value;
+            const selectedCategory = selector.options[selector.selectedIndex].getAttribute('data-category');
+            const card = document.getElementById('current-exercise-card');
+            card.setAttribute('data-exercise-name', selectedName);
+            document.getElementById('card-exercise-name').innerText = selectedName;
+            document.getElementById('card-exercise-category').innerText = selectedCategory;
+            loadLatestRecord(selectedName);
+        }
+
+        function addSet(initialWeight = "", initialReps = "", previousLabel = "-") {
+            setCcunt++;
+            const setList = document.getElementById('dynamic-set-list');
+            const newSet = document.createElement('div');
+            newSet.className = "grid grid-cols-4 items-center text-center gap-2 py-1 set-row";
+            newSet.setAttribute('data-set-num', setCcunt);
+            newSet.innerHTML = `
+                <div class="text-sm font-semibold text-slate-400">${setCcunt}</div>
+                <div class="text-xs text-slate-500">${previousLabel}</div>
+                <div><input type="number" value="${initialWeight}" placeholder="0" class="input-weight w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1.5 focus:outline-none"></div>
+                <div><input type="number" value="${initialReps}" placeholder="0" class="input-reps w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1.5 focus:outline-none"></div>
+            `;
+            setList.appendChild(newSet);
+        }
+
+        async function importByExercise() {
+            const currentExercise = document.getElementById('exercise-selector').value;
+            try {
+                const response = await fetch(`/api/workouts/search?exercise_name=${encodeURIComponent(currentExercise)}`);
+                const result = await response.json();
+                if(!result.sets || result.sets.length === 0) { alert("과거 로그가 없습니다."); return; }
+                setCcunt = 0; document.getElementById('dynamic-set-list').innerHTML = '';
+                result.sets.forEach(s => addSet(s.weight, s.reps, `${s.weight}kg x ${s.reps}`));
+                alert("기록을 가져왔습니다.");
+            } catch (error) { alert("실패"); }
+        }
+
+        function toggleImportDateModal(show) { document.getElementById('import-date-modal').classList.toggle('hidden', !show); }
+
+        async function importByDateSubmit() {
+            const targetDate = document.getElementById('import-target-date').value;
+            if(!targetDate) return;
+            try {
+                const response = await fetch(`/api/workouts/search?date=${targetDate}`);
+                const result = await response.json();
+                if(!result.sets || result.sets.length === 0) { alert("로그가 없습니다."); return; }
+                document.getElementById('workout-title-input').value = result.sets[0].title;
+                document.getElementById('exercise-selector').value = result.sets[0].exercise_name;
+                onExerciseChange();
+                setCcunt = 0; document.getElementById('dynamic-set-list').innerHTML = '';
+                result.sets.forEach(s => addSet(s.weight, s.reps, `${s.weight}kg x ${s.reps}`));
+                toggleImportDateModal(false);
+            } catch (error) { alert("실패"); }
+        }
+
+        async function loadLatestRecord(exerciseName) {
+            try {
+                const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/latest`);
+                const data = await response.json();
+                const rows = document.querySelectorAll('.set-row');
+                rows.forEach((row, idx) => {
+                    const prevDiv = row.querySelector('div:nth-child(2)');
+                    prevDiv.innerText = (data.latest && data.latest[idx]) ? data.latest[idx] : "-";
+                });
+            } catch (error) {}
+        }
+
+        async function saveWorkout() {
+            const title = document.getElementById('workout-title-input').value.trim() || "💪 자율 운동";
+            const setsData = [];
+            const setRows = document.querySelectorAll('.set-row');
+            setRows.forEach(row => {
+                const exerciseName = row.closest('.exercise-card').getAttribute('data-exercise-name');
+                const setNum = parseInt(row.getAttribute('data-set-num'));
+                const weight = parseFloat(row.querySelector('.input-weight').value) || 0;
+                const reps = parseInt(row.querySelector('.input-reps').value) || 0;
+                if (weight > 0 && reps > 0) setsData.push({ exercise_name: exerciseName, set_num: setNum, weight, reps });
+            });
+            if (setsData.length === 0) return;
+            try {
+                const response = await fetch('/api/workouts', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, sets: setsData })
+                });
+                if (response.ok) { alert("🎉 저장 완료!"); resetSetRows(); }
+            } catch (error) { alert("실패"); }
+        }
+
+        async function generateCalendar() {
+            const daysContainer = document.getElementById('calendar-days'); daysContainer.innerHTML = '';
+            const now = new Date(); const year = now.getFullYear(); const month = now.getMonth();
+            document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`;
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            let workoutDates = [];
+            try {
+                const response = await fetch('/api/workouts/dates');
+                const data = await response.json(); workoutDates = data.workout_dates || [];
+            } catch (error) {}
+            for (let i = 0; i < firstDayIndex; i++) daysContainer.appendChild(document.createElement('div'));
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDiv = document.createElement('div');
+                const currentFormatDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                dayDiv.className = "relative py-1 flex items-center justify-center font-semibold text-slate-300 cursor-pointer";
+                dayDiv.onclick = () => showDateDetail(currentFormatDate);
+                if (workoutDates.includes(currentFormatDate)) {
+                    dayDiv.innerHTML = `<span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center">${day}</span>`;
+                } else { dayDiv.innerHTML = `<span class="w-8 h-8 flex items-center justify-center text-slate-500">${day}</span>`; }
+                daysContainer.appendChild(dayDiv);
+            }
+        }
+
+        async function showDateDetail(dateStr) {
+            const panel = document.getElementById('calendar-detail-panel');
+            try {
+                const response = await fetch(`/api/workouts/by-date/${dateStr}`);
+                const result = await response.json();
+                if (result.has_data) {
+                    let execHtml = result.exercises.map(ex => `<div class="flex justify-between bg-slate-700/30 px-3 py-1.5 rounded-lg text-slate-300"><span>🏋️‍♂️ ${ex.name}</span><span class="text-indigo-400 font-bold">${ex.sets}세트</span></div>`).join('');
+                    panel.innerHTML = `<div class="w-full text-left space-y-2"><div>${dateStr}</div><div class="text-sm font-bold text-white">${result.title}</div><div class="space-y-1.5">${execHtml}</div></div>`;
+                } else { panel.innerHTML = `<span>기록 없음</span>`; }
+            } catch (error) { panel.innerHTML = `<span>오류</span>`; }
+        }
+
+        async function draw1RMChart() {
+            const selector = document.getElementById('exercise-selector');
+            const exerciseName = selector.value || "바벨 벤치프레스";
+            document.getElementById('chart-exercise-title').innerText = `🏋️‍♂️ ${exerciseName} 추이`;
+            let chartLabels = []; let chartData = [];
+            try {
+                const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/1rm-history`);
+                const result = await response.json(); chartLabels = result.labels || []; chartData = result.data || [];
+            } catch (error) {}
+            const ctx = document.getElementById('oneRmMixChart').getContext('2d');
+            if (myChartInstance) myChartInstance.destroy();
+            myChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{ label: '1RM', data: chartData, borderColor: 'rgb(99, 102, 241)', borderWidth: 3, tension: 0.3 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function switchView(view) {
+            const views = { workout: document.getElementById('view-workout'), calendar: document.getElementById('view-calendar'), chart: document.getElementById('view-chart') };
+            const navs = { workout: document.getElementById('nav-workout'), calendar: document.getElementById('nav-calendar'), chart: document.getElementById('nav-chart') };
+            Object.keys(views).forEach(key => { views[key].classList.add('hidden'); navs[key].classList.remove('text-indigo-400'); });
+            views[view].classList.remove('hidden'); navs[view].classList.add('text-indigo-400');
+            if (view === 'calendar') generateCalendar(); if (view === 'chart') draw1RMChart();
+        }
+
+        function toggleNewExerciseModal(show) { document.getElementById('new-exercise-modal').classList.toggle('hidden', !show); }
+        async function addNewExerciseSubmit() {
+            const name = document.getElementById('new-ex-name').value.trim(); const category = document.getElementById('new-ex-category').value;
+            if(!name) return;
+            const response = await fetch('/api/exercises', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, category }) });
+            if(response.ok) { toggleNewExerciseModal(false); await loadExerciseSelector(); document.getElementById('exercise-selector').value = name; onExerciseChange(); }
+        }
+    </script>
+</body>
+</html>
