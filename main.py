@@ -234,3 +234,10 @@ def search_past_workouts(date: Optional[str] = None, exercise_name: Optional[str
 def read_root():
     with open("index.html", "r", encoding="utf-8") as f:
         return f.read()
+
+
+# icon 불러오기
+@app.get("/static/icon.png")
+def get_icon():
+    from fastapi.responses import FileResponse
+    return FileResponse("icon.png")
