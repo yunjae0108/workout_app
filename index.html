@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 번핏 v2.1 - 세트 체크박스</title>
+    <title>나만의 번핏 v2.2 - kg 입력 최적화</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex justify-center">
 
-    <!-- 모바일 컨테이너 -->
     <div class="w-full max-w-md bg-slate-900 min-h-screen flex flex-col justify-between p-4 shadow-xl relative overflow-hidden">
         
-        <!-- ================= [1] 운동 기록 화면 ================= -->
         <div id="view-workout" class="flex-1 flex flex-col justify-between">
             <header class="flex justify-between items-center py-2 border-b border-slate-800">
                 <div class="flex-1 mr-2">
@@ -26,7 +24,6 @@
             </header>
 
             <main class="flex-1 py-4 space-y-4 overflow-y-auto">
-                <!-- 운동 선택 및 추가 영역 -->
                 <div class="bg-slate-800/40 p-3 rounded-2xl border border-slate-800 space-y-2">
                     <label class="text-xs text-slate-400 font-medium">오늘 진행할 운동 추가</label>
                     <div class="flex gap-2 items-center">
@@ -41,13 +38,11 @@
                     </div>
                 </div>
 
-                <!-- 운동 카드 컨테이너 -->
                 <div id="workout-cards-container" class="space-y-4 pt-2">
                 </div>
             </main>
         </div>
 
-        <!-- 새 운동 추가 모달 -->
         <div id="new-exercise-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
                 <h3 class="text-base font-bold text-white">🏋️‍♂️ 새 운동 종목 추가</h3>
@@ -68,7 +63,6 @@
             </div>
         </div>
 
-        <!-- ================= [2] 캘린더 화면 ================= -->
         <div id="view-calendar" class="hidden flex-1 flex flex-col pt-2 animate-fade-in space-y-4">
             <header class="py-2 border-b border-slate-800"><h1 class="text-xl font-bold">📅 운동 캘린더</h1></header>
             <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50">
@@ -83,7 +77,6 @@
             </div>
         </div>
 
-        <!-- ================= [3] 분석 화면 ================= -->
         <div id="view-chart" class="hidden flex-1 flex flex-col pt-2 animate-fade-in">
             <header class="py-2 border-b border-slate-800 mb-4"><h1 class="text-xl font-bold">📈 1RM 분석</h1></header>
             <div class="mb-3">
@@ -95,7 +88,6 @@
             </div>
         </div>
 
-        <!-- 하단 네비게이션 바 -->
         <nav class="flex justify-around items-center py-3 bg-slate-850 border-t border-slate-800 text-slate-400 rounded-t-2xl mt-4">
             <button onclick="switchView('workout')" id="nav-workout" class="flex flex-col items-center gap-1 text-indigo-400">
                 <span class="material-icons">edit_note</span><span class="text-[10px] font-medium">일지</span>
@@ -163,9 +155,8 @@
                         </div>
                     </div>
 
-                    <!-- 컬럼 레이아웃 4등분 유지 -->
                     <div class="grid grid-cols-4 text-center text-xs font-medium text-slate-400 py-1 border-b border-slate-700/50">
-                        <div>세트</div><div>이전 기록</div><div>kg / Reps</div><div>체크</div>
+                        <div>세트</div><div>이전 기록</div><div>중량 (kg)</div><div>체크</div>
                     </div>
 
                     <div class="space-y-2 set-list"></div>
@@ -184,28 +175,29 @@
             loadLatestRecordForCard(cardId, name);
         }
 
-        // [수정] 우측 4번째 칸에 대형 원형 토글 체크박스 버튼 빌드업
-        function addSetToCard(cardId, weight = "", reps = "", prevLabel = "-") {
+        // [수정 2] 입력창 다이어트 (Reps 창 영구 제거 및 5단위, 음수 방지 가이드 주입)
+        function addSetToCard(cardId, weight = "0", reps = "0", prevLabel = "-") {
             const card = document.getElementById(cardId);
             const setList = card.querySelector('.set-list');
             const currentSets = setList.querySelectorAll('.set-row').length + 1;
             const rowId = 'row-' + cardId + '-' + currentSets;
 
+            // 만약 기본 생성이 아니라면 초기값을 40kg 등 유저 친화적인 베이스로 세팅
+            const defaultWeight = weight === "0" || weight === "" ? "40" : weight;
+
             const newSet = document.createElement('div');
-            newSet.className = "grid grid-cols-4 items-center text-center gap-2 py-1 set-row transition-all duration-200" + (weight ? " opacity-100" : "");
+            newSet.className = "grid grid-cols-4 items-center text-center gap-2 py-1 set-row transition-all duration-200";
             newSet.id = rowId;
             newSet.setAttribute('data-set-num', currentSets);
             newSet.innerHTML = `
                 <div class="text-sm font-semibold text-slate-400 set-index-label">${currentSets}</div>
                 <div class="text-xs text-slate-500 previous-feedback">${prevLabel}</div>
                 
-                <!-- 중량과 횟수 입력창을 한 셀에 위아래로 깔끔하게 배치하여 공간 확보 -->
-                <div class="space-y-1">
-                    <input type="number" value="${weight}" placeholder="kg" class="input-weight w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                    <input type="number" value="${reps}" placeholder="reps" class="input-reps w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <div>
+                    <input type="number" value="${defaultWeight}" min="0" step="5" class="input-weight w-full bg-slate-700 text-center font-bold text-white rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="hidden" value="${currentSets}" class="input-reps">
                 </div>
                 
-                <!-- [핵심] 원형 체크 버튼 영역 -->
                 <div class="flex justify-center">
                     <button onclick="toggleSetCheck('${rowId}')" class="check-btn w-8 h-8 rounded-full border-2 border-slate-600 flex items-center justify-center text-slate-600 hover:border-indigo-500 hover:text-indigo-400 transition-all focus:outline-none" data-checked="false">
                         <span class="material-icons text-base">done</span>
@@ -215,19 +207,16 @@
             setList.appendChild(newSet);
         }
 
-        // 체크박스 클릭 핸들러 (인터랙션 및 디밍 효과)
         function toggleSetCheck(rowId) {
             const row = document.getElementById(rowId);
             const btn = row.querySelector('.check-btn');
             const isChecked = btn.getAttribute('data-checked') === 'true';
 
             if (!isChecked) {
-                // 체크 처리
                 btn.setAttribute('data-checked', 'true');
                 btn.className = "check-btn w-8 h-8 rounded-full bg-indigo-600 border-2 border-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/30 transition-all focus:outline-none";
-                row.classList.add('opacity-40'); // 완료된 세트는 흐리게 디ming 처리해 시각적 완성
+                row.classList.add('opacity-40');
             } else {
-                // 체크 해제
                 btn.setAttribute('data-checked', 'false');
                 btn.className = "check-btn w-8 h-8 rounded-full border-2 border-slate-600 flex items-center justify-center text-slate-600 hover:border-indigo-500 hover:text-indigo-400 transition-all focus:outline-none";
                 row.classList.remove('opacity-40');
@@ -247,7 +236,6 @@
             } catch (error) {}
         }
 
-        // 저장 로직 (체크 유무와 상관없이 입력된 숫자가 있으면 다 저장)
         async function saveWorkout() {
             const title = document.getElementById('workout-title-input').value.trim() || "💪 오늘의 운동";
             const setsData = [];
@@ -260,9 +248,10 @@
                 rows.forEach(row => {
                     const setNum = parseInt(row.getAttribute('data-set-num'));
                     const weight = parseFloat(row.querySelector('.input-weight').value) || 0;
-                    const reps = parseInt(row.querySelector('.input-reps').value) || 0;
+                    // 가상 reps 데이터 추출
+                    const reps = parseInt(row.querySelector('.input-reps').value) || setNum;
                     
-                    if (weight > 0 && reps > 0) {
+                    if (weight > 0) {
                         setsData.push({ exercise_name: exerciseName, set_num: setNum, weight, reps });
                     }
                 });
@@ -283,7 +272,7 @@
             } catch (error) { alert("저장 실패"); }
         }
 
-        // 캘린더 및 차트 제어 (기존 동일)
+        // 제어 로직들 동일 유지
         function switchView(view) {
             const views = { workout: document.getElementById('view-workout'), calendar: document.getElementById('view-calendar'), chart: document.getElementById('view-chart') };
             const navs = { workout: document.getElementById('nav-workout'), calendar: document.getElementById('nav-calendar'), chart: document.getElementById('nav-chart') };
@@ -340,7 +329,7 @@
             });
         }
 
-        function toggleNewExerciseModal(show) { document.getElementById('new-exercise-modal').classList.toggle('hidden', !show); }
+         Zar toggleNewExerciseModal(show) { document.getElementById('new-exercise-modal').classList.toggle('hidden', !show); }
         async function addNewExerciseSubmit() {
             const name = document.getElementById('new-ex-name').value.trim(); const category = document.getElementById('new-ex-category').value; if(!name) return;
             const response = await fetch('/api/exercises', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, category }) });
