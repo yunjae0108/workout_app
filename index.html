@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 번핏 v2.2 - 오류 수정판</title>
+    <title>나만의 번핏 v2.3 - 타이머 완결판</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex justify-center">
 
-    <!-- 모바일 컨테이너 -->
     <div class="w-full max-w-md bg-slate-900 min-h-screen flex flex-col justify-between p-4 shadow-xl relative overflow-hidden">
         
-        <!-- ================= [1] 운동 기록 화면 ================= -->
         <div id="view-workout" class="flex-1 flex flex-col justify-between">
             <header class="flex justify-between items-center py-2 border-b border-slate-800">
                 <div class="flex-1 mr-2">
@@ -25,8 +23,26 @@
                 </button>
             </header>
 
+            <div class="mt-3 bg-slate-800/80 rounded-2xl p-3 border border-slate-700/50 flex justify-between items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-icons text-indigo-400">timer</span>
+                    <div class="text-left">
+                        <p class="text-[10px] text-slate-400 font-medium">지정 휴식 시간</p>
+                        <select id="global-rest-setter" class="bg-slate-900 text-white rounded px-1.5 py-0.5 text-xs font-bold focus:outline-none">
+                            <option value="60">60초 (1분)</option>
+                            <option value="90" selected>90초 (1분 30원)</option>
+                            <option value="120">120초 (2분)</option>
+                            <option value="150">150초 (2분 30초)</option>
+                            <option value="180">180초 (3분)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="timer-display" class="bg-slate-900/80 px-4 py-2 rounded-xl text-xl font-black text-slate-500 font-mono tracking-wider">
+                    00:00
+                </div>
+            </div>
+
             <main class="flex-1 py-4 space-y-4 overflow-y-auto">
-                <!-- 운동 선택 및 추가 영역 -->
                 <div class="bg-slate-800/40 p-3 rounded-2xl border border-slate-800 space-y-2">
                     <label class="text-xs text-slate-400 font-medium">오늘 진행할 운동 추가</label>
                     <div class="flex gap-2 items-center">
@@ -41,13 +57,11 @@
                     </div>
                 </div>
 
-                <!-- 운동 카드 컨테이너 -->
                 <div id="workout-cards-container" class="space-y-4 pt-2">
                 </div>
             </main>
         </div>
 
-        <!-- 새 운동 추가 모달 -->
         <div id="new-exercise-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
                 <h3 class="text-base font-bold text-white">🏋️‍♂️ 새 운동 종목 추가</h3>
@@ -68,7 +82,6 @@
             </div>
         </div>
 
-        <!-- ================= [2] 캘린더 화면 ================= -->
         <div id="view-calendar" class="hidden flex-1 flex flex-col pt-2 animate-fade-in space-y-4">
             <header class="py-2 border-b border-slate-800"><h1 class="text-xl font-bold">📅 운동 캘린더</h1></header>
             <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50">
@@ -83,7 +96,6 @@
             </div>
         </div>
 
-        <!-- ================= [3] 분석 화면 ================= -->
         <div id="view-chart" class="hidden flex-1 flex flex-col pt-2 animate-fade-in">
             <header class="py-2 border-b border-slate-800 mb-4"><h1 class="text-xl font-bold">📈 1RM 분석</h1></header>
             <div class="mb-3">
@@ -95,7 +107,6 @@
             </div>
         </div>
 
-        <!-- 하단 네비게이션 바 -->
         <nav class="flex justify-around items-center py-3 bg-slate-850 border-t border-slate-800 text-slate-400 rounded-t-2xl mt-4">
             <button onclick="switchView('workout')" id="nav-workout" class="flex flex-col items-center gap-1 text-indigo-400">
                 <span class="material-icons">edit_note</span><span class="text-[10px] font-medium">일지</span>
@@ -109,110 +120,88 @@
         </nav>
     </div>
 
+    <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
+
     <script>
         let myChartInstance = null;
         let exerciseListGlobal = [];
+        
+        // 타이머 제어용 글로벌 변수 세팅
+        let countdownInterval = null;
+        let remainingTime = 0;
 
         window.onload = async function() {
             await loadExerciseSelectors();
             createExerciseCard("바벨 벤치프레스", "가슴");
+            
+            // 모바일 사파리 오디오 락 해제를 위한 터치 리스너 우회 활성화
+            document.body.addEventListener('touchstart', function() {
+                const audio = document.getElementById('alarm-sound');
+                audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(()=>{});
+            }, { once: true });
         };
 
-        async function loadExerciseSelectors() {
-            try {
-                const response = await fetch('/api/exercises');
-                exerciseListGlobal = await response.json();
-                const selector = document.getElementById('exercise-selector');
-                const chartSelector = document.getElementById('chart-exercise-selector');
-                selector.innerHTML = ''; chartSelector.innerHTML = '';
+        // [신규 핵심] 타이머 구동 시스템 함수
+        function startRestTimer() {
+            // 기존 돌고 있던 타이머가 있다면 즉시 파괴 리셋
+            if (countdownInterval) clearInterval(countdownInterval);
 
-                exerciseListGlobal.forEach(ex => {
-                    const opt1 = document.createElement('option');
-                    opt1.value = ex.name; opt1.innerText = `[${ex.category}] ${ex.name}`;
-                    opt1.setAttribute('data-category', ex.category);
-                    selector.appendChild(opt1);
-
-                    const opt2 = document.createElement('option');
-                    opt2.value = ex.name; opt2.innerText = `[${ex.category}] ${ex.name}`;
-                    chartSelector.appendChild(opt2);
-                });
-            } catch (error) { console.error(error); }
-        }
-
-        function addExerciseCardFromSelector() {
-            const selector = document.getElementById('exercise-selector');
-            const name = selector.value;
-            const category = selector.options[selector.selectedIndex].getAttribute('data-category');
-            if (document.querySelector(`[data-exercise-name="${name}"]`)) { alert("이미 추가된 운동입니다!"); return; }
-            createExerciseCard(name, category);
-        }
-
-        function createExerciseCard(name, category) {
-            const container = document.getElementById('workout-cards-container');
-            const cardId = 'card-' + Date.now();
+            const display = document.getElementById('timer-display');
+            const setter = document.getElementById('global-rest-setter');
             
-            const cardHtml = `
-                <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50 space-y-3 exercise-card animate-fade-in" id="${cardId}" data-exercise-name="${name}">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-base font-bold text-white flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>${name}
-                        </h2>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded-md">${category}</span>
-                            <button onclick="document.getElementById('${cardId}').remove()" class="text-slate-500 hover:text-red-400 transition-colors"><span class="material-icons text-sm">close</span></button>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-4 text-center text-xs font-medium text-slate-400 py-1 border-b border-slate-700/50">
-                        <div>세트</div><div>이전 기록</div><div>중량 (kg)</div><div>체크</div>
-                    </div>
-
-                    <div class="space-y-2 set-list"></div>
-
-                    <button onclick="addSetToCard('${cardId}')" class="w-full bg-slate-700/40 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2 rounded-xl transition-all border border-dashed border-slate-600/50 flex items-center justify-center gap-1">
-                        <span class="material-icons text-sm">add</span> 세트 추가
-                    </button>
-                </div>
-            `;
+            remainingTime = parseInt(setter.value);
             
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = cardHtml;
-            container.appendChild(tempDiv.firstElementChild);
+            // 디자인 불 켜기 (네온 색상 전환)
+            display.classList.remove('text-slate-500');
+            display.classList.add('text-emerald-400', 'animate-pulse');
 
-            addSetToCard(cardId);
-            loadLatestRecordForCard(cardId, name);
+            updateTimerDisplay(remainingTime);
+
+            countdownInterval = setInterval(() => {
+                remainingTime--;
+                updateTimerDisplay(remainingTime);
+
+                if (remainingTime <= 0) {
+                    clearInterval(countdownInterval);
+                    display.classList.remove('text-emerald-400', 'animate-pulse');
+                    display.classList.add('text-rose-500'); // 종료 시 붉은 경고등
+                    
+                    // 소리 재생 및 알림 팝업 창 작동
+                    triggerAlarm();
+                }
+            }, 1000);
         }
 
-        function addSetToCard(cardId, weight = "0", reps = "0", prevLabel = "-") {
-            const card = document.getElementById(cardId);
-            const setList = card.querySelector('.set-list');
-            const currentSets = setList.querySelectorAll('.set-row').length + 1;
-            const rowId = 'row-' + cardId + '-' + currentSets;
-
-            const defaultWeight = weight === "0" || weight === "" ? "40" : weight;
-
-            const newSet = document.createElement('div');
-            newSet.className = "grid grid-cols-4 items-center text-center gap-2 py-1 set-row transition-all duration-200";
-            newSet.id = rowId;
-            newSet.setAttribute('data-set-num', currentSets);
-            newSet.innerHTML = `
-                <div class="text-sm font-semibold text-slate-400 set-index-label">${currentSets}</div>
-                <div class="text-xs text-slate-500 previous-feedback">${prevLabel}</div>
-                
-                <div>
-                    <input type="number" value="${defaultWeight}" min="0" step="5" class="input-weight w-full bg-slate-700 text-center font-bold text-white rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <input type="hidden" value="${currentSets}" class="input-reps">
-                </div>
-                
-                <div class="flex justify-center">
-                    <button onclick="toggleSetCheck('${rowId}')" class="check-btn w-8 h-8 rounded-full border-2 border-slate-600 flex items-center justify-center text-slate-600 hover:border-indigo-500 hover:text-indigo-400 transition-all focus:outline-none" data-checked="false">
-                        <span class="material-icons text-base">done</span>
-                    </button>
-                </div>
-            `;
-            setList.appendChild(newSet);
+        // 시간 포맷 정리 (01:30)
+        function updateTimerDisplay(totalSeconds) {
+            const display = document.getElementById('timer-display');
+            const min = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const sec = String(totalSeconds % 60).padStart(2, '0');
+            display.innerText = `${min}:${sec}`;
         }
 
+        // 알람 소리 발생
+        function triggerAlarm() {
+            const audio = document.getElementById('alarm-sound');
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("사운드 재생 제한 걸림: ", e));
+            
+            // 진동 (모바일 브라우저 지원 시)
+            if (navigator.vibrate) {
+                navigator.vibrate([500, 200, 500]);
+            }
+
+            // 시각적 확인 팝업창
+            setTimeout(() => {
+                alert("⏰ 휴식 시간 끝! 다음 세트 들어갈 시간입니다 윤님!");
+                audio.pause();
+                audio.currentTime = 0;
+                document.getElementById('timer-display').className = "bg-slate-900/80 px-4 py-2 rounded-xl text-xl font-black text-slate-500 font-mono tracking-wider";
+                document.getElementById('timer-display').innerText = "00:00";
+            }, 100);
+        }
+
+        // [수정] 체크박스를 누를 때, "체크(완료) 상태로 변경되는 순간"에만 자동으로 휴식 타이머가 작동
         function toggleSetCheck(rowId) {
             const row = document.getElementById(rowId);
             const btn = row.querySelector('.check-btn');
@@ -222,6 +211,9 @@
                 btn.setAttribute('data-checked', 'true');
                 btn.className = "check-btn w-8 h-8 rounded-full bg-indigo-600 border-2 border-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/30 transition-all focus:outline-none";
                 row.classList.add('opacity-40');
+                
+                // ⭐️ 완료 불 켜졌으니 자동으로 타이머 스타트!
+                startRestTimer();
             } else {
                 btn.setAttribute('data-checked', 'false');
                 btn.className = "check-btn w-8 h-8 rounded-full border-2 border-slate-600 flex items-center justify-center text-slate-600 hover:border-indigo-500 hover:text-indigo-400 transition-all focus:outline-none";
@@ -229,51 +221,81 @@
             }
         }
 
+        // 이하 기존 뼈대 함수 동일 유지
+        async function loadExerciseSelectors() {
+            try {
+                const response = await fetch('/api/exercises');
+                exerciseListGlobal = await response.json();
+                const selector = document.getElementById('exercise-selector');
+                const chartSelector = document.getElementById('chart-exercise-selector');
+                selector.innerHTML = ''; chartSelector.innerHTML = '';
+
+                exerciseListGlobal.forEach(ex => {
+                    const opt1 = document.createElement('option'); opt1.value = ex.name; opt1.innerText = `[${ex.category}] ${ex.name}`; opt1.setAttribute('data-category', ex.category); selector.appendChild(opt1);
+                    const opt2 = document.createElement('option'); opt2.value = ex.name; opt2.innerText = `[${ex.category}] ${ex.name}`; chartSelector.appendChild(opt2);
+                });
+            } catch (error) { console.error(error); }
+        }
+
+        function addExerciseCardFromSelector() {
+            const selector = document.getElementById('exercise-selector'); const name = selector.value;
+            const category = selector.options[selector.selectedIndex].getAttribute('data-category');
+            if (document.querySelector(`[data-exercise-name="${name}"]`)) { alert("이미 추가된 운동입니다!"); return; }
+            createExerciseCard(name, category);
+        }
+
+        function createExerciseCard(name, category) {
+            const container = document.getElementById('workout-cards-container'); const cardId = 'card-' + Date.now();
+            const cardHtml = `
+                <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50 space-y-3 exercise-card animate-fade-in" id="${cardId}" data-exercise-name="${name}">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>${name}</h2>
+                        <div class="flex items-center gap-2"><span class="text-xs text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded-md">${category}</span><button onclick="document.getElementById('${cardId}').remove()" class="text-slate-500 hover:text-red-400 transition-colors"><span class="material-icons text-sm">close</span></button></div>
+                    </div>
+                    <div class="grid grid-cols-4 text-center text-xs font-medium text-slate-400 py-1 border-b border-slate-700/50"><div>세트</div><div>이전 기록</div><div>중량 (kg)</div><div>체크</div></div>
+                    <div class="space-y-2 set-list"></div>
+                    <button onclick="addSetToCard('${cardId}')" class="w-full bg-slate-700/40 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2 rounded-xl transition-all border border-dashed border-slate-600/50 flex items-center justify-center gap-1"><span class="material-icons text-sm">add</span> 세트 추가</button>
+                </div>
+            `;
+            const tempDiv = document.createElement('div'); tempDiv.innerHTML = cardHtml; container.appendChild(tempDiv.firstElementChild);
+            addSetToCard(cardId); loadLatestRecordForCard(cardId, name);
+        }
+
+        function addSetToCard(cardId, weight = "0", reps = "0", prevLabel = "-") {
+            const card = document.getElementById(cardId); const setList = card.querySelector('.set-list');
+            const currentSets = setList.querySelectorAll('.set-row').length + 1; const rowId = 'row-' + cardId + '-' + currentSets;
+            const defaultWeight = weight === "0" || weight === "" ? "40" : weight;
+            const newSet = document.createElement('div'); newSet.className = "grid grid-cols-4 items-center text-center gap-2 py-1 set-row transition-all duration-200"; newSet.id = rowId; newSet.setAttribute('data-set-num', currentSets);
+            newSet.innerHTML = `
+                <div class="text-sm font-semibold text-slate-400 set-index-label">${currentSets}</div><div class="text-xs text-slate-500 previous-feedback">${prevLabel}</div>
+                <div><input type="number" value="${defaultWeight}" min="0" step="5" class="input-weight w-full bg-slate-700 text-center font-bold text-white rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><input type="hidden" value="${currentSets}" class="input-reps"></div>
+                <div class="flex justify-center"><button onclick="toggleSetCheck('${rowId}')" class="check-btn w-8 h-8 rounded-full border-2 border-slate-600 flex items-center justify-center text-slate-600 hover:border-indigo-500 hover:text-indigo-400 transition-all focus:outline-none" data-checked="false"><span class="material-icons text-base">done</span></button></div>
+            `;
+            setList.appendChild(newSet);
+        }
+
         async function loadLatestRecordForCard(cardId, exerciseName) {
             try {
-                const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/latest`);
-                const data = await response.json();
-                const card = document.getElementById(cardId);
-                const rows = card.querySelectorAll('.set-row');
-                rows.forEach((row, idx) => {
-                    const prevDiv = row.querySelector('.previous-feedback');
-                    prevDiv.innerText = (data.latest && data.latest[idx]) ? data.latest[idx] : "-";
-                });
+                const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/latest`); const data = await response.json();
+                const card = document.getElementById(cardId); const rows = card.querySelectorAll('.set-row');
+                rows.forEach((row, idx) => { const prevDiv = row.querySelector('.previous-feedback'); prevDiv.innerText = (data.latest && data.latest[idx]) ? data.latest[idx] : "-"; });
             } catch (error) {}
         }
 
         async function saveWorkout() {
-            const title = document.getElementById('workout-title-input').value.trim() || "💪 오늘의 운동";
-            const setsData = [];
-            
+            const title = document.getElementById('workout-title-input').value.trim() || "💪 오늘의 운동"; const setsData = [];
             const cards = document.querySelectorAll('.exercise-card');
             cards.forEach(card => {
-                const exerciseName = card.getAttribute('data-exercise-name');
-                const rows = card.querySelectorAll('.set-row');
-                
+                const exerciseName = card.getAttribute('data-exercise-name'); const rows = card.querySelectorAll('.set-row');
                 rows.forEach(row => {
-                    const setNum = parseInt(row.getAttribute('data-set-num'));
-                    const weight = parseFloat(row.querySelector('.input-weight').value) || 0;
-                    const reps = parseInt(row.querySelector('.input-reps').value) || setNum;
-                    
-                    if (weight > 0) {
-                        setsData.push({ exercise_name: exerciseName, set_num: setNum, weight, reps });
-                    }
+                    const setNum = parseInt(row.getAttribute('data-set-num')); const weight = parseFloat(row.querySelector('.input-weight').value) || 0; const reps = parseInt(row.querySelector('.input-reps').value) || setNum;
+                    if (weight > 0) setsData.push({ exercise_name: exerciseName, set_num: setNum, weight, reps });
                 });
             });
-
             if (setsData.length === 0) { alert("기록할 데이터가 없습니다!"); return; }
-
             try {
-                const response = await fetch('/api/workouts', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, sets: setsData })
-                });
-                if (response.ok) {
-                    alert("🎉 오늘 루틴 저장 완료! 오운완 수고하셨습니다!");
-                    document.getElementById('workout-cards-container').innerHTML = '';
-                    createExerciseCard("바벨 벤치프레스", "가슴");
-                }
+                const response = await fetch('/api/workouts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, sets: setsData }) });
+                if (response.ok) { alert("🎉 오늘 루틴 저장 완료! 오운완 수고하셨습니다!"); document.getElementById('workout-cards-container').innerHTML = ''; createExerciseCard("バベル ベン치프레스", "가슴"); }
             } catch (error) { alert("저장 실패"); }
         }
 
@@ -286,24 +308,12 @@
         }
 
         async function generateCalendar() {
-            const daysContainer = document.getElementById('calendar-days'); daysContainer.innerHTML = '';
-            const now = new Date(); const year = now.getFullYear(); const month = now.getMonth();
-            document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`;
-            const firstDayIndex = new Date(year, month, 1).getDay(); const totalDays = new Date(year, month + 1, 0).getDate();
-            let workoutDates = [];
-            try {
-                const response = await fetch('/api/workouts/dates');
-                const data = await response.json(); workoutDates = data.workout_dates || [];
-            } catch (error) {}
+            const daysContainer = document.getElementById('calendar-days'); daysContainer.innerHTML = ''; const now = new Date(); const year = now.getFullYear(); const month = now.getMonth(); document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`; const firstDayIndex = new Date(year, month, 1).getDay(); const totalDays = new Date(year, month + 1, 0).getDate(); let workoutDates = [];
+            try { const response = await fetch('/api/workouts/dates'); const data = await response.json(); workoutDates = data.workout_dates || []; } catch (error) {}
             for (let i = 0; i < firstDayIndex; i++) daysContainer.appendChild(document.createElement('div'));
             for (let day = 1; day <= totalDays; day++) {
-                const dayDiv = document.createElement('div'); const currentFormatDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                dayDiv.className = "relative py-1 flex items-center justify-center font-semibold text-slate-300 cursor-pointer";
-                dayDiv.onclick = () => showDateDetail(currentFormatDate);
-                if (workoutDates.includes(currentFormatDate)) {
-                    dayDiv.innerHTML = `<span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center">${day}</span>`;
-                } else { dayDiv.innerHTML = `<span class="w-8 h-8 flex items-center justify-center text-slate-500">${day}</span>`; }
-                daysContainer.appendChild(dayDiv);
+                const dayDiv = document.createElement('div'); const currentFormatDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; dayDiv.className = "relative py-1 flex items-center justify-center font-semibold text-slate-300 cursor-pointer"; dayDiv.onclick = () => showDateDetail(currentFormatDate);
+                if (workoutDates.includes(currentFormatDate)) { dayDiv.innerHTML = `<span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center">${day}</span>`; } else { dayDiv.innerHTML = `<span class="w-8 h-8 flex items-center justify-center text-slate-500">${day}</span>`; } daysContainer.appendChild(dayDiv);
             }
         }
 
@@ -312,33 +322,23 @@
             try {
                 const response = await fetch(`/api/workouts/by-date/${dateStr}`); const result = await response.json();
                 if (result.has_data) {
-                    let execHtml = result.exercises.map(ex => `<div class="flex justify-between bg-slate-700/30 px-3 py-1.5 rounded-lg text-slate-300"><span>🏋️‍♂️ ${ex.name}</span><span class="text-indigo-400 font-bold">${ex.sets}세트</span></div>`).join('');
-                    panel.innerHTML = `<div class="w-full text-left space-y-2"><div>${dateStr}</div><div class="text-sm font-bold text-white">${result.title}</div><div class="space-y-1.5">${execHtml}</div></div>`;
+                    let execHtml = result.exercises.map(ex => `<div class="flex justify-between bg-slate-700/30 px-3 py-1.5 rounded-lg text-slate-300"><span>🏋️‍♂️ ${ex.name}</span><span class="text-indigo-400 font-bold">${ex.sets}세트</span></div>`).join(''); panel.innerHTML = `<div class="w-full text-left space-y-2"><div>${dateStr}</div><div class="text-sm font-bold text-white">${result.title}</div><div class="space-y-1.5">${execHtml}</div></div>`;
                 } else { panel.innerHTML = `<span>기록 없음</span>`; }
             } catch (error) { panel.innerHTML = `<span>오류</span>`; }
         }
 
         async function draw1RMChart() {
             const selector = document.getElementById('chart-exercise-selector'); const exerciseName = selector.value; if(!exerciseName) return;
-            document.getElementById('chart-exercise-title').innerText = `🏋️‍♂️ ${exerciseName} 추이`;
-            let chartLabels = []; let chartData = [];
-            try {
-                const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/1rm-history`);
-                const result = await response.json(); chartLabels = result.labels || []; chartData = result.data || [];
-            } catch (error) {}
+            document.getElementById('chart-exercise-title').innerText = `🏋️‍♂️ ${exerciseName} 추이`; let chartLabels = []; let chartData = [];
+            try { const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/1rm-history`); const result = await response.json(); chartLabels = result.labels || []; chartData = result.data || []; } catch (error) {}
             const ctx = document.getElementById('oneRmMixChart').getContext('2d'); if (myChartInstance) myChartInstance.destroy();
-            myChartInstance = new Chart(ctx, {
-                type: 'line', data: { labels: chartLabels, datasets: [{ label: '1RM', data: chartData, borderColor: 'rgb(99, 102, 241)', borderWidth: 3, tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+            myChartInstance = new Chart(ctx, { type: 'line', data: { labels: chartLabels, datasets: [{ label: '1RM', data: chartData, borderColor: 'rgb(99, 102, 241)', borderWidth: 3, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         }
 
-        // 오타 수정완료 (Zar -> function)
         function toggleNewExerciseModal(show) { document.getElementById('new-exercise-modal').classList.toggle('hidden', !show); }
         async function addNewExerciseSubmit() {
             const name = document.getElementById('new-ex-name').value.trim(); const category = document.getElementById('new-ex-category').value; if(!name) return;
-            const response = await fetch('/api/exercises', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, category }) });
-            if(response.ok) { toggleNewExerciseModal(false); await loadExerciseSelectors(); }
+            const response = await fetch('/api/exercises', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, category }) }); if(response.ok) { toggleNewExerciseModal(false); await loadExerciseSelectors(); }
         }
     </script>
 </body>
