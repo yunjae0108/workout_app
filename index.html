@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 번핏 v2.2 - kg 입력 최적화</title>
+    <title>나만의 번핏 v2.2 - 오류 수정판</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex justify-center">
 
+    <!-- 모바일 컨테이너 -->
     <div class="w-full max-w-md bg-slate-900 min-h-screen flex flex-col justify-between p-4 shadow-xl relative overflow-hidden">
         
+        <!-- ================= [1] 운동 기록 화면 ================= -->
         <div id="view-workout" class="flex-1 flex flex-col justify-between">
             <header class="flex justify-between items-center py-2 border-b border-slate-800">
                 <div class="flex-1 mr-2">
@@ -24,6 +26,7 @@
             </header>
 
             <main class="flex-1 py-4 space-y-4 overflow-y-auto">
+                <!-- 운동 선택 및 추가 영역 -->
                 <div class="bg-slate-800/40 p-3 rounded-2xl border border-slate-800 space-y-2">
                     <label class="text-xs text-slate-400 font-medium">오늘 진행할 운동 추가</label>
                     <div class="flex gap-2 items-center">
@@ -38,11 +41,13 @@
                     </div>
                 </div>
 
+                <!-- 운동 카드 컨테이너 -->
                 <div id="workout-cards-container" class="space-y-4 pt-2">
                 </div>
             </main>
         </div>
 
+        <!-- 새 운동 추가 모달 -->
         <div id="new-exercise-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
                 <h3 class="text-base font-bold text-white">🏋️‍♂️ 새 운동 종목 추가</h3>
@@ -63,6 +68,7 @@
             </div>
         </div>
 
+        <!-- ================= [2] 캘린더 화면 ================= -->
         <div id="view-calendar" class="hidden flex-1 flex flex-col pt-2 animate-fade-in space-y-4">
             <header class="py-2 border-b border-slate-800"><h1 class="text-xl font-bold">📅 운동 캘린더</h1></header>
             <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50">
@@ -77,6 +83,7 @@
             </div>
         </div>
 
+        <!-- ================= [3] 분석 화면 ================= -->
         <div id="view-chart" class="hidden flex-1 flex flex-col pt-2 animate-fade-in">
             <header class="py-2 border-b border-slate-800 mb-4"><h1 class="text-xl font-bold">📈 1RM 분석</h1></header>
             <div class="mb-3">
@@ -88,6 +95,7 @@
             </div>
         </div>
 
+        <!-- 하단 네비게이션 바 -->
         <nav class="flex justify-around items-center py-3 bg-slate-850 border-t border-slate-800 text-slate-400 rounded-t-2xl mt-4">
             <button onclick="switchView('workout')" id="nav-workout" class="flex flex-col items-center gap-1 text-indigo-400">
                 <span class="material-icons">edit_note</span><span class="text-[10px] font-medium">일지</span>
@@ -175,14 +183,12 @@
             loadLatestRecordForCard(cardId, name);
         }
 
-        // [수정 2] 입력창 다이어트 (Reps 창 영구 제거 및 5단위, 음수 방지 가이드 주입)
         function addSetToCard(cardId, weight = "0", reps = "0", prevLabel = "-") {
             const card = document.getElementById(cardId);
             const setList = card.querySelector('.set-list');
             const currentSets = setList.querySelectorAll('.set-row').length + 1;
             const rowId = 'row-' + cardId + '-' + currentSets;
 
-            // 만약 기본 생성이 아니라면 초기값을 40kg 등 유저 친화적인 베이스로 세팅
             const defaultWeight = weight === "0" || weight === "" ? "40" : weight;
 
             const newSet = document.createElement('div');
@@ -248,7 +254,6 @@
                 rows.forEach(row => {
                     const setNum = parseInt(row.getAttribute('data-set-num'));
                     const weight = parseFloat(row.querySelector('.input-weight').value) || 0;
-                    // 가상 reps 데이터 추출
                     const reps = parseInt(row.querySelector('.input-reps').value) || setNum;
                     
                     if (weight > 0) {
@@ -272,7 +277,6 @@
             } catch (error) { alert("저장 실패"); }
         }
 
-        // 제어 로직들 동일 유지
         function switchView(view) {
             const views = { workout: document.getElementById('view-workout'), calendar: document.getElementById('view-calendar'), chart: document.getElementById('view-chart') };
             const navs = { workout: document.getElementById('nav-workout'), calendar: document.getElementById('nav-calendar'), chart: document.getElementById('nav-chart') };
@@ -329,7 +333,8 @@
             });
         }
 
-         Zar toggleNewExerciseModal(show) { document.getElementById('new-exercise-modal').classList.toggle('hidden', !show); }
+        // 오타 수정완료 (Zar -> function)
+        function toggleNewExerciseModal(show) { document.getElementById('new-exercise-modal').classList.toggle('hidden', !show); }
         async function addNewExerciseSubmit() {
             const name = document.getElementById('new-ex-name').value.trim(); const category = document.getElementById('new-ex-category').value; if(!name) return;
             const response = await fetch('/api/exercises', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, category }) });
