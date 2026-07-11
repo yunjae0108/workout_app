@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 번핏 v2.4 - 타이머 사운드 증폭판</title>
+    <title>나만의 번핏 v2.6 - 리셋 버튼 우측 정렬</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex justify-center">
 
-    <!-- 모바일 컨테이너 -->
     <div class="w-full max-w-md bg-slate-900 min-h-screen flex flex-col justify-between p-4 shadow-xl relative overflow-hidden">
         
-        <!-- ================= [1] 운동 기록 화면 ================= -->
         <div id="view-workout" class="flex-1 flex flex-col justify-between">
             <header class="flex justify-between items-center py-2 border-b border-slate-800">
                 <div class="flex-1 mr-2">
@@ -25,14 +23,11 @@
                 </button>
             </header>
 
-            <!-- 글로벌 실시간 휴식 타이머 & 세팅 탑 바 -->
-            <div class="mt-3 bg-slate-800/80 rounded-2xl p-3 border border-slate-700/50 flex justify-between items-center gap-3">
-                <div class="flex items-center gap-2">
-                    <span class="material-icons text-indigo-400">timer</span>
+            <div class="mt-3 bg-slate-800/80 rounded-2xl p-3 border border-slate-700/50 flex justify-between items-center gap-2">
+                <div class="flex items-center gap-1.5 flex-1">
+                    <span class="material-icons text-indigo-400 text-sm">timer</span>
                     <div class="text-left">
-                        <p class="text-[10px] text-slate-400 font-medium">지정 휴식 시간</p>
-                        <!-- [수정 1] 45초 옵션 추가 및 오타 전면 교정 -->
-                        <select id="global-rest-setter" class="bg-slate-900 text-white rounded px-1.5 py-0.5 text-xs font-bold focus:outline-none">
+                        <select id="global-rest-setter" class="bg-slate-900 text-white rounded px-1 py-0.5 text-[11px] font-bold focus:outline-none">
                             <option value="45">45초</option>
                             <option value="60">60초 (1분)</option>
                             <option value="90" selected>90초 (1분 30초)</option>
@@ -42,8 +37,14 @@
                         </select>
                     </div>
                 </div>
-                <div id="timer-display" class="bg-slate-900/80 px-4 py-2 rounded-xl text-xl font-black text-slate-500 font-mono tracking-wider">
-                    00:00
+
+                <div class="flex items-center gap-2">
+                    <div id="timer-display" class="bg-slate-900/80 px-3.5 py-1.5 rounded-xl text-lg font-black text-slate-500 font-mono tracking-wider transition-colors">
+                        00:00
+                    </div>
+                    <button onclick="resetRestTimer()" class="text-[11px] font-bold text-slate-400 bg-slate-700/40 hover:bg-slate-700 hover:text-white px-2.5 py-1.5 rounded-lg border border-slate-600/30 transition-all focus:outline-none active:scale-95개">
+                        Reset
+                    </button>
                 </div>
             </div>
 
@@ -62,13 +63,11 @@
                     </div>
                 </div>
 
-                <!-- 운동 카드 컨테이너 -->
                 <div id="workout-cards-container" class="space-y-4 pt-2">
                 </div>
             </main>
         </div>
 
-        <!-- 새 운동 추가 모달 -->
         <div id="new-exercise-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
                 <h3 class="text-base font-bold text-white">🏋️‍♂️ 새 운동 종목 추가</h3>
@@ -89,7 +88,6 @@
             </div>
         </div>
 
-        <!-- ================= [2] 캘린더 화면 ================= -->
         <div id="view-calendar" class="hidden flex-1 flex flex-col pt-2 animate-fade-in space-y-4">
             <header class="py-2 border-b border-slate-800"><h1 class="text-xl font-bold">📅 운동 캘린더</h1></header>
             <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50">
@@ -104,7 +102,6 @@
             </div>
         </div>
 
-        <!-- ================= [3] 분석 화면 ================= -->
         <div id="view-chart" class="hidden flex-1 flex flex-col pt-2 animate-fade-in">
             <header class="py-2 border-b border-slate-800 mb-4"><h1 class="text-xl font-bold">📈 1RM 분석</h1></header>
             <div class="mb-3">
@@ -116,7 +113,6 @@
             </div>
         </div>
 
-        <!-- 하단 네비게이션 바 -->
         <nav class="flex justify-around items-center py-3 bg-slate-850 border-t border-slate-800 text-slate-400 rounded-t-2xl mt-4">
             <button onclick="switchView('workout')" id="nav-workout" class="flex flex-col items-center gap-1 text-indigo-400">
                 <span class="material-icons">edit_note</span><span class="text-[10px] font-medium">일지</span>
@@ -130,7 +126,6 @@
         </nav>
     </div>
 
-    <!-- [수정 2] 알람 타격감이 더 선명하고 쨍한 고음의 주소(전자 혼 비프음)로 교체 및 사전 로드 -->
     <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
 
     <script>
@@ -143,9 +138,8 @@
             await loadExerciseSelectors();
             createExerciseCard("바벨 벤치프레스", "가슴");
             
-            // 모바일 iOS 오디오 엔진 볼륨 강제 맥시멈 세팅
             const audio = document.getElementById('alarm-sound');
-            audio.volume = 1.0; // 브라우저가 출력할 수 있는 최대 소리 크기 고정
+            audio.volume = 1.0;
 
             document.body.addEventListener('touchstart', function() {
                 audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(()=>{});
@@ -160,8 +154,7 @@
             
             remainingTime = parseInt(setter.value);
             
-            display.classList.remove('text-slate-500', 'text-rose-500');
-            display.classList.add('text-emerald-400', 'animate-pulse');
+            display.className = "bg-slate-900/80 px-3.5 py-1.5 rounded-xl text-lg font-black text-emerald-400 font-mono tracking-wider animate-pulse";
 
             updateTimerDisplay(remainingTime);
 
@@ -171,11 +164,23 @@
 
                 if (remainingTime <= 0) {
                     clearInterval(countdownInterval);
-                    display.classList.remove('text-emerald-400', 'animate-pulse');
-                    display.classList.add('text-rose-500');
+                    display.className = "bg-slate-900/80 px-3.5 py-1.5 rounded-xl text-lg font-black text-rose-500 font-mono tracking-wider";
                     triggerAlarm();
                 }
             }, 1000);
+        }
+
+        function resetRestTimer() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            remainingTime = 0;
+            
+            const display = document.getElementById('timer-display');
+            display.className = "bg-slate-900/80 px-3.5 py-1.5 rounded-xl text-lg font-black text-slate-500 font-mono tracking-wider";
+            display.innerText = "00:00";
+
+            const audio = document.getElementById('alarm-sound');
+            audio.pause();
+            audio.currentTime = 0;
         }
 
         function updateTimerDisplay(totalSeconds) {
@@ -187,23 +192,22 @@
 
         function triggerAlarm() {
             const audio = document.getElementById('alarm-sound');
-            audio.volume = 1.0; // 알람 울릴 때 다시 한번 볼륨 맥스 스크립트 실행 안전장치
+            audio.volume = 1.0;
             audio.currentTime = 0;
             
-            // 헬스장에서 확실히 들리도록 강제 재생 유도
-            audio.play().catch(e => console.log("재생 거부 우회 처리됨", e));
+            audio.play().catch(e => console.log(e));
             
-            if (navigator.vibrate) {
-                navigator.vibrate([600, 250, 600]); // 진동 타격 시간 증폭
-            }
-
             setTimeout(() => {
+                if (navigator.vibrate) {
+                    navigator.vibrate([500, 200, 500, 200, 500]);
+                }
                 alert("⏰ 휴식 시간 끝! 다음 세트 들어갈 시간입니다 윤님!");
+                
                 audio.pause();
                 audio.currentTime = 0;
-                document.getElementById('timer-display').className = "bg-slate-900/80 px-4 py-2 rounded-xl text-xl font-black text-slate-500 font-mono tracking-wider";
+                document.getElementById('timer-display').className = "bg-slate-900/80 px-3.5 py-1.5 rounded-xl text-lg font-black text-slate-500 font-mono tracking-wider";
                 document.getElementById('timer-display').innerText = "00:00";
-            }, 100);
+            }, 50);
         }
 
         function toggleSetCheck(rowId) {
@@ -223,7 +227,6 @@
             }
         }
 
-        // 이하 기존 제어 구조 완벽 유지
         async function loadExerciseSelectors() {
             try {
                 const response = await fetch('/api/exercises');
@@ -231,7 +234,6 @@
                 const selector = document.getElementById('exercise-selector');
                 const chartSelector = document.getElementById('chart-exercise-selector');
                 selector.innerHTML = ''; chartSelector.innerHTML = '';
-
                 exerciseListGlobal.forEach(ex => {
                     const opt1 = document.createElement('option'); opt1.value = ex.name; opt1.innerText = `[${ex.category}] ${ex.name}`; opt1.setAttribute('data-category', ex.category); selector.appendChild(opt1);
                     const opt2 = document.createElement('option'); opt2.value = ex.name; opt2.innerText = `[${ex.category}] ${ex.name}`; chartSelector.appendChild(opt2);
