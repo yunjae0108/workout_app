@@ -1,23 +1,24 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <link rel="apple-touch-icon" href="/static/icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 번핏 v1.4 - 클라우드 버전</title>
+    <title>나만의 번핏 v2.0 - 다중 운동 모아보기</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex justify-center">
 
+    <!-- 모바일 컨테이너 -->
     <div class="w-full max-w-md bg-slate-900 min-h-screen flex flex-col justify-between p-4 shadow-xl relative overflow-hidden">
         
+        <!-- ================= [1] 운동 기록 화면 ================= -->
         <div id="view-workout" class="flex-1 flex flex-col justify-between">
             <header class="flex justify-between items-center py-2 border-b border-slate-800">
                 <div class="flex-1 mr-2">
                     <p class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">Today's Workout</p>
-                    <input type="text" id="workout-title-input" value="💪 가슴 & 삼두" class="bg-transparent text-xl font-bold text-white border-b border-transparent hover:border-slate-600 focus:border-indigo-500 focus:outline-none w-full py-0.5">
+                    <input type="text" id="workout-title-input" value="💪 가슴 & 삼두 루틴" class="bg-transparent text-xl font-bold text-white border-b border-transparent hover:border-slate-600 focus:border-indigo-500 focus:outline-none w-full py-0.5">
                 </div>
                 <button onclick="saveWorkout()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 shrink-0">
                     완료
@@ -25,44 +26,29 @@
             </header>
 
             <main class="flex-1 py-4 space-y-4 overflow-y-auto">
-                <div class="flex gap-2 items-center">
-                    <select id="exercise-selector" onchange="onExerciseChange()" class="flex-1 bg-slate-800 text-white border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </select>
-                    <button onclick="toggleNewExerciseModal(true)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl border border-slate-700 flex items-center justify-center">
-                        <span class="material-icons text-xl">add</span>
-                    </button>
+                <!-- 운동 선택 및 화면에 카드 추가하는 영역 -->
+                <div class="bg-slate-800/40 p-3 rounded-2xl border border-slate-800 space-y-2">
+                    <label class="text-xs text-slate-400 font-medium">오늘 진행할 운동 추가</label>
+                    <div class="flex gap-2 items-center">
+                        <select id="exercise-selector" class="flex-1 bg-slate-800 text-white border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </select>
+                        <button onclick="addExerciseCardFromSelector()" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                            <span class="material-icons text-xl">playlist_add</span>
+                        </button>
+                        <button onclick="toggleNewExerciseModal(true)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2.5 rounded-xl border border-slate-700 flex items-center justify-center">
+                            <span class="material-icons text-xl">add</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
-                    <button onclick="importByExercise()" class="bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 py-2.5 rounded-xl flex items-center justify-center gap-1 transition-all">
-                        <span class="material-icons text-sm">download</span> 이 운동만 Import
-                    </button>
-                    <button onclick="toggleImportDateModal(true)" class="bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 py-2.5 rounded-xl flex items-center justify-center gap-1 transition-all">
-                        <span class="material-icons text-sm">history</span> 날짜 통째로 Import
-                    </button>
-                </div>
-
-                <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50 space-y-3 exercise-card" id="current-exercise-card" data-exercise-name="">
-                    <div class="flex justify-between items-center">
-                        <h2 id="card-exercise-name" class="text-base font-bold text-white flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>로딩 중...
-                        </h2>
-                        <span id="card-exercise-category" class="text-xs text-slate-400">-</span>
-                    </div>
-
-                    <div class="grid grid-cols-4 text-center text-xs font-medium text-slate-400 py-1 border-b border-slate-700/50">
-                        <div>세트</div><div>이전 기록</div><div>kg</div><div>Reps</div>
-                    </div>
-
-                    <div class="space-y-2 set-list" id="dynamic-set-list"></div>
-
-                    <button onclick="addSet()" class="w-full bg-slate-700/40 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2 rounded-xl transition-all border border-dashed border-slate-600/50 flex items-center justify-center gap-1">
-                        <span class="material-icons text-sm">add</span> 세트 추가
-                    </button>
+                <!-- [핵심] 오늘 하는 운동 카드들이 차곡차곡 쌓이는 컨테이너 -->
+                <div id="workout-cards-container" class="space-y-4 pt-2">
+                    <!-- 자바스크립트가 카드를 동적으로 추가함 -->
                 </div>
             </main>
         </div>
 
+        <!-- 날짜 선택 Import 모달 -->
         <div id="import-date-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
                 <h3 class="text-base font-bold text-white flex items-center gap-1">📅 과거 날짜 선택</h3>
@@ -74,6 +60,7 @@
             </div>
         </div>
 
+        <!-- 새 운동 추가 모달 -->
         <div id="new-exercise-modal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-slate-800 w-full max-w-xs rounded-2xl p-5 border border-slate-700 space-y-4 shadow-2xl">
                 <h3 class="text-base font-bold text-white">🏋️‍♂️ 새 운동 종목 추가</h3>
@@ -94,6 +81,7 @@
             </div>
         </div>
 
+        <!-- ================= [2] 캘린더 화면 ================= -->
         <div id="view-calendar" class="hidden flex-1 flex flex-col pt-2 animate-fade-in space-y-4">
             <header class="py-2 border-b border-slate-800"><h1 class="text-xl font-bold">📅 운동 캘린더</h1></header>
             <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50">
@@ -108,14 +96,23 @@
             </div>
         </div>
 
+        <!-- ================= [3] 분석 화면 ================= -->
         <div id="view-chart" class="hidden flex-1 flex flex-col pt-2 animate-fade-in">
             <header class="py-2 border-b border-slate-800 mb-4"><h1 class="text-xl font-bold">📈 1RM 분석</h1></header>
+            
+            <!-- 분석 탭 상단 종목 피커 추가 -->
+            <div class="mb-3">
+                <select id="chart-exercise-selector" onchange="draw1RMChart()" class="w-full bg-slate-800 text-white border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none">
+                </select>
+            </div>
+
             <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/50 space-y-4">
                 <h3 id="chart-exercise-title" class="text-sm font-bold text-indigo-400">-</h3>
                 <div class="relative w-full h-64"><canvas id="oneRmMixChart"></canvas></div>
             </div>
         </div>
 
+        <!-- 하단 네비게이션 바 -->
         <nav class="flex justify-around items-center py-3 bg-slate-850 border-t border-slate-800 text-slate-400 rounded-t-2xl mt-4">
             <button onclick="switchView('workout')" id="nav-workout" class="flex flex-col items-center gap-1 text-indigo-400">
                 <span class="material-icons">edit_note</span><span class="text-[10px] font-medium">일지</span>
@@ -130,126 +127,206 @@
     </div>
 
     <script>
-        let setCcunt = 0;
         let myChartInstance = null;
+        let exerciseListGlobal = []; // 전체 종목 리스트 보관용
 
         window.onload = async function() {
-            await loadExerciseSelector();
-            resetSetRows();
+            await loadExerciseSelectors();
+            // 최초에 기본으로 벤치프레스 카드 한 장 띄워두기
+            createExerciseCard("바벨 벤치프레스", "가슴");
         };
 
-        function resetSetRows() {
-            setCcunt = 0;
-            document.getElementById('dynamic-set-list').innerHTML = '';
-            addSet();
-        }
-
-        async function loadExerciseSelector() {
+        // 셀렉터들에 종목 채우기
+        async function loadExerciseSelectors() {
             try {
-                const response = await fetch('/api/exercises'); // 도메인 제거 및 상대 경로 처리
-                const list = await response.json();
+                const response = await fetch('/api/exercises');
+                exerciseListGlobal = await response.json();
+                
                 const selector = document.getElementById('exercise-selector');
+                const chartSelector = document.getElementById('chart-exercise-selector');
+                
                 selector.innerHTML = '';
-                list.forEach(ex => {
-                    const option = document.createElement('option');
-                    option.value = ex.name; option.innerText = `[${ex.category}] ${ex.name}`;
-                    option.setAttribute('data-category', ex.category);
-                    selector.appendChild(option);
+                chartSelector.innerHTML = '';
+
+                exerciseListGlobal.forEach(ex => {
+                    const opt1 = document.createElement('option');
+                    opt1.value = ex.name; opt1.innerText = `[${ex.category}] ${ex.name}`;
+                    opt1.setAttribute('data-category', ex.category);
+                    selector.appendChild(opt1);
+
+                    const opt2 = document.createElement('option');
+                    opt2.value = ex.name; opt2.innerText = `[${ex.category}] ${ex.name}`;
+                    chartSelector.appendChild(opt2);
                 });
-                if(list.length > 0) onExerciseChange();
             } catch (error) { console.error(error); }
         }
 
-        function onExerciseChange() {
+        // 셀렉터에서 선택된 종목을 오늘 일지 화면에 카드로 추가하기
+        function addExerciseCardFromSelector() {
             const selector = document.getElementById('exercise-selector');
-            if (!selector.value) return;
-            const selectedName = selector.value;
-            const selectedCategory = selector.options[selector.selectedIndex].getAttribute('data-category');
-            const card = document.getElementById('current-exercise-card');
-            card.setAttribute('data-exercise-name', selectedName);
-            document.getElementById('card-exercise-name').innerText = selectedName;
-            document.getElementById('card-exercise-category').innerText = selectedCategory;
-            loadLatestRecord(selectedName);
+            const name = selector.value;
+            const category = selector.options[selector.selectedIndex].getAttribute('data-category');
+            
+            // 이미 화면에 추가된 종목인지 중복 체크
+            if (document.querySelector(`[data-exercise-name="${name}"]`)) {
+                alert("이미 오늘 일지에 추가된 운동입니다!");
+                return;
+            }
+            createExerciseCard(name, category);
         }
 
-        function addSet(initialWeight = "", initialReps = "", previousLabel = "-") {
-            setCcunt++;
-            const setList = document.getElementById('dynamic-set-list');
+        // 동적으로 운동 카드 HTML을 생성하는 함수
+        async function createExerciseCard(name, category) {
+            const container = document.getElementById('workout-cards-container');
+            const cardId = 'card-' + Date.now(); // 고유 ID 부여
+            
+            const cardHtml = `
+                <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50 space-y-3 exercise-card" id="${cardId}" data-exercise-name="${name}">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                            ${name}
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded-md">${category}</span>
+                            <button onclick="document.getElementById('${cardId}').remove()" class="text-slate-500 hover:text-red-400 transition-colors">
+                                <span class="material-icons text-sm">close</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 text-center text-xs font-medium text-slate-400 py-1 border-b border-slate-700/50">
+                        <div>세트</div><div>이전 기록</div><div>kg</div><div>Reps</div>
+                    </div>
+
+                    <div class="space-y-2 set-list">
+                        <!-- 첫 번째 세트 기본 생성 -->
+                    </div>
+
+                    <button onclick="addSetToCard('${cardId}')" class="w-full bg-slate-700/40 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2 rounded-xl transition-all border border-dashed border-slate-600/50 flex items-center justify-center gap-1">
+                        <span class="material-icons text-sm">add</span> 세트 추가
+                    </button>
+                </div>
+            `;
+            
+            // 컨테이너에 카드 추가
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cardHtml;
+            container.appendChild(tempDiv.firstElementChild);
+
+            // 해당 카드의 첫 세트 행 생성 및 이전 기록 가이드 로드
+            addSetToCard(cardId);
+            await loadLatestRecordForCard(cardId, name);
+        }
+
+        // 특정 카드에 세트 행을 추가하는 함수
+        function addSetToCard(cardId, weight = "", reps = "", prevLabel = "-") {
+            const card = document.getElementById(cardId);
+            const setList = card.querySelector('.set-list');
+            const currentSets = setList.querySelectorAll('.set-row').length + 1;
+
             const newSet = document.createElement('div');
             newSet.className = "grid grid-cols-4 items-center text-center gap-2 py-1 set-row";
-            newSet.setAttribute('data-set-num', setCcunt);
+            newSet.setAttribute('data-set-num', currentSets);
             newSet.innerHTML = `
-                <div class="text-sm font-semibold text-slate-400">${setCcunt}</div>
-                <div class="text-xs text-slate-500">${previousLabel}</div>
-                <div><input type="number" value="${initialWeight}" placeholder="0" class="input-weight w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1.5 focus:outline-none"></div>
-                <div><input type="number" value="${initialReps}" placeholder="0" class="input-reps w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1.5 focus:outline-none"></div>
+                <div class="text-sm font-semibold text-slate-400">${currentSets}</div>
+                <div class="text-xs text-slate-500 previous-feedback">${prevLabel}</div>
+                <div><input type="number" value="${weight}" placeholder="0" class="input-weight w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1.5 focus:outline-none"></div>
+                <div><input type="number" value="${reps}" placeholder="0" class="input-reps w-full bg-slate-700 text-center font-bold text-white rounded-lg py-1.5 focus:outline-none"></div>
             `;
             setList.appendChild(newSet);
         }
 
-        async function importByExercise() {
-            const currentExercise = document.getElementById('exercise-selector').value;
-            try {
-                const response = await fetch(`/api/workouts/search?exercise_name=${encodeURIComponent(currentExercise)}`);
-                const result = await response.json();
-                if(!result.sets || result.sets.length === 0) { alert("과거 로그가 없습니다."); return; }
-                setCcunt = 0; document.getElementById('dynamic-set-list').innerHTML = '';
-                result.sets.forEach(s => addSet(s.weight, s.reps, `${s.weight}kg x ${s.reps}`));
-                alert("기록을 가져왔습니다.");
-            } catch (error) { alert("실패"); }
-        }
-
-        function toggleImportDateModal(show) { document.getElementById('import-date-modal').classList.toggle('hidden', !show); }
-
-        async function importByDateSubmit() {
-            const targetDate = document.getElementById('import-target-date').value;
-            if(!targetDate) return;
-            try {
-                const response = await fetch(`/api/workouts/search?date=${targetDate}`);
-                const result = await response.json();
-                if(!result.sets || result.sets.length === 0) { alert("로그가 없습니다."); return; }
-                document.getElementById('workout-title-input').value = result.sets[0].title;
-                document.getElementById('exercise-selector').value = result.sets[0].exercise_name;
-                onExerciseChange();
-                setCcunt = 0; document.getElementById('dynamic-set-list').innerHTML = '';
-                result.sets.forEach(s => addSet(s.weight, s.reps, `${s.weight}kg x ${s.reps}`));
-                toggleImportDateModal(false);
-            } catch (error) { alert("실패"); }
-        }
-
-        async function loadLatestRecord(exerciseName) {
+        // 특정 카드 전용 이전 가이드 기록 호출
+        async function loadLatestRecordForCard(cardId, exerciseName) {
             try {
                 const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/latest`);
                 const data = await response.json();
-                const rows = document.querySelectorAll('.set-row');
+                const card = document.getElementById(cardId);
+                const rows = card.querySelectorAll('.set-row');
+                
                 rows.forEach((row, idx) => {
-                    const prevDiv = row.querySelector('div:nth-child(2)');
+                    const prevDiv = row.querySelector('.previous-feedback');
                     prevDiv.innerText = (data.latest && data.latest[idx]) ? data.latest[idx] : "-";
                 });
             } catch (error) {}
         }
 
+        // [완료] 버튼 클릭 시 화면에 있는 모든 카드의 모든 세트를 묶어 단일 세션으로 일괄 저장
         async function saveWorkout() {
-            const title = document.getElementById('workout-title-input').value.trim() || "💪 자율 운동";
+            const title = document.getElementById('workout-title-input').value.trim() || "💪 오늘의 운동";
             const setsData = [];
-            const setRows = document.querySelectorAll('.set-row');
-            setRows.forEach(row => {
-                const exerciseName = row.closest('.exercise-card').getAttribute('data-exercise-name');
-                const setNum = parseInt(row.getAttribute('data-set-num'));
-                const weight = parseFloat(row.querySelector('.input-weight').value) || 0;
-                const reps = parseInt(row.querySelector('.input-reps').value) || 0;
-                if (weight > 0 && reps > 0) setsData.push({ exercise_name: exerciseName, set_num: setNum, weight, reps });
+            
+            // 화면에 열려 있는 모든 운동 카드를 순회
+            const cards = document.querySelectorAll('.exercise-card');
+            cards.forEach(card => {
+                const exerciseName = card.getAttribute('data-exercise-name');
+                const rows = card.querySelectorAll('.set-row');
+                
+                rows.forEach(row => {
+                    const setNum = parseInt(row.getAttribute('data-set-num'));
+                    const weight = parseFloat(row.querySelector('.input-weight').value) || 0;
+                    const reps = parseInt(row.querySelector('.input-reps').value) || 0;
+                    
+                    if (weight > 0 && reps > 0) {
+                        setsData.push({
+                            exercise_name: exerciseName,
+                            set_num: setNum,
+                            weight: weight,
+                            reps: reps
+                        });
+                    }
+                });
             });
-            if (setsData.length === 0) return;
+
+            if (setsData.length === 0) {
+                alert("기록할 운동 세트가 존재하지 않습니다!");
+                return;
+            }
+
             try {
                 const response = await fetch('/api/workouts', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title, sets: setsData })
                 });
-                if (response.ok) { alert("🎉 저장 완료!"); resetSetRows(); }
-            } catch (error) { alert("실패"); }
+
+                if (response.ok) {
+                    alert("🎉 오늘 진행한 모든 운동이 한 번에 DB에 저장되었습니다! 오운완!");
+                    document.getElementById('workout-cards-container').innerHTML = '';
+                    // 첫 세팅 원상복구
+                    createExerciseCard("바벨 벤치프레스", "가슴");
+                }
+            } catch (error) { alert("서버 저장 실패"); }
         }
 
+        // 분석 탭 1RM 차트 시각화
+        async function draw1RMChart() {
+            const selector = document.getElementById('chart-exercise-selector');
+            const exerciseName = selector.value;
+            if(!exerciseName) return;
+            
+            document.getElementById('chart-exercise-title').innerText = `🏋️‍♂️ ${exerciseName} 추이`;
+            let chartLabels = []; let chartData = [];
+            try {
+                const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/1rm-history`);
+                const result = await response.json(); chartLabels = result.labels || []; chartData = result.data || [];
+            } catch (error) {}
+            
+            const ctx = document.getElementById('oneRmMixChart').getContext('2d');
+            if (myChartInstance) myChartInstance.destroy();
+            
+            myChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{ label: '1RM', data: chartData, borderColor: 'rgb(99, 102, 241)', borderWidth: 3, tension: 0.3 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // 캘린더 요약 보기 및 날짜 마킹 (기존 유지)
         async function generateCalendar() {
             const daysContainer = document.getElementById('calendar-days'); daysContainer.innerHTML = '';
             const now = new Date(); const year = now.getFullYear(); const month = now.getMonth();
@@ -286,27 +363,6 @@
             } catch (error) { panel.innerHTML = `<span>오류</span>`; }
         }
 
-        async function draw1RMChart() {
-            const selector = document.getElementById('exercise-selector');
-            const exerciseName = selector.value || "바벨 벤치프레스";
-            document.getElementById('chart-exercise-title').innerText = `🏋️‍♂️ ${exerciseName} 추이`;
-            let chartLabels = []; let chartData = [];
-            try {
-                const response = await fetch(`/api/exercises/${encodeURIComponent(exerciseName)}/1rm-history`);
-                const result = await response.json(); chartLabels = result.labels || []; chartData = result.data || [];
-            } catch (error) {}
-            const ctx = document.getElementById('oneRmMixChart').getContext('2d');
-            if (myChartInstance) myChartInstance.destroy();
-            myChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{ label: '1RM', data: chartData, borderColor: 'rgb(99, 102, 241)', borderWidth: 3, tension: 0.3 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-        }
-
         function switchView(view) {
             const views = { workout: document.getElementById('view-workout'), calendar: document.getElementById('view-calendar'), chart: document.getElementById('view-chart') };
             const navs = { workout: document.getElementById('nav-workout'), calendar: document.getElementById('nav-calendar'), chart: document.getElementById('nav-chart') };
@@ -320,7 +376,7 @@
             const name = document.getElementById('new-ex-name').value.trim(); const category = document.getElementById('new-ex-category').value;
             if(!name) return;
             const response = await fetch('/api/exercises', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, category }) });
-            if(response.ok) { toggleNewExerciseModal(false); await loadExerciseSelector(); document.getElementById('exercise-selector').value = name; onExerciseChange(); }
+            if(response.ok) { toggleNewExerciseModal(false); await loadExerciseSelectors(); }
         }
     </script>
 </body>
