@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 번핏 v2.6 - 리셋 버튼 우측 정렬</title>
+    <title>나만의 번핏 v2.7 - 캘린더 오늘 날짜 강조</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -42,7 +42,7 @@
                     <div id="timer-display" class="bg-slate-900/80 px-3.5 py-1.5 rounded-xl text-lg font-black text-slate-500 font-mono tracking-wider transition-colors">
                         00:00
                     </div>
-                    <button onclick="resetRestTimer()" class="text-[11px] font-bold text-slate-400 bg-slate-700/40 hover:bg-slate-700 hover:text-white px-2.5 py-1.5 rounded-lg border border-slate-600/30 transition-all focus:outline-none active:scale-95개">
+                    <button onclick="resetRestTimer()" class="text-[11px] font-bold text-slate-400 bg-slate-700/40 hover:bg-slate-700 hover:text-white px-2.5 py-1.5 rounded-lg border border-slate-600/30 transition-all focus:outline-none active:scale-95">
                         Reset
                     </button>
                 </div>
@@ -311,13 +311,58 @@
             if (view === 'calendar') generateCalendar(); if (view === 'chart') draw1RMChart();
         }
 
+        // [기능 추가] 캘린더 내부에서 시스템 "오늘" 날짜를 판별하여 확실하게 서클 인디케이터 제공
         async function generateCalendar() {
-            const daysContainer = document.getElementById('calendar-days'); daysContainer.innerHTML = ''; const now = new Date(); const year = now.getFullYear(); const month = now.getMonth(); document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`; const firstDayIndex = new Date(year, month, 1).getDay(); const totalDays = new Date(year, month + 1, 0).getDate(); let workoutDates = [];
-            try { const response = await fetch('/api/workouts/dates'); const data = await response.json(); workoutDates = data.workout_dates || []; } catch (error) {}
+            const daysContainer = document.getElementById('calendar-days'); 
+            daysContainer.innerHTML = ''; 
+            
+            const now = new Date(); 
+            const year = now.getFullYear(); 
+            const month = now.getMonth(); 
+            const todayDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`; 
+            
+            const firstDayIndex = new Date(year, month, 1).getDay(); 
+            const totalDays = new Date(year, month + 1, 0).getDate(); 
+            let workoutDates = [];
+            
+            try { 
+                const response = await fetch('/api/workouts/dates'); 
+                const data = await response.json(); 
+                workoutDates = data.workout_dates || []; 
+            } catch (error) {}
+            
             for (let i = 0; i < firstDayIndex; i++) daysContainer.appendChild(document.createElement('div'));
+            
             for (let day = 1; day <= totalDays; day++) {
-                const dayDiv = document.createElement('div'); const currentFormatDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; dayDiv.className = "relative py-1 flex items-center justify-center font-semibold text-slate-300 cursor-pointer"; dayDiv.onclick = () => showDateDetail(currentFormatDate);
-                if (workoutDates.includes(currentFormatDate)) { dayDiv.innerHTML = `<span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center">${day}</span>`; } else { dayDiv.innerHTML = `<span class="w-8 h-8 flex items-center justify-center text-slate-500">${day}</span>`; } daysContainer.appendChild(dayDiv);
+                const dayDiv = document.createElement('div'); 
+                const currentFormatDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; 
+                dayDiv.className = "relative py-1 flex items-center justify-center font-semibold text-slate-300 cursor-pointer"; 
+                dayDiv.onclick = () => showDateDetail(currentFormatDate);
+                
+                const isToday = (currentFormatDate === todayDateString);
+                const hasWorkout = workoutDates.includes(currentFormatDate);
+                
+                // 오늘이면서 운동 기록이 있는 경우 vs 오늘이면서 운동 기록이 없는 경우 vs 일반 날짜 분기 처리
+                if (hasWorkout) {
+                    if (isToday) {
+                        // 오늘 운동 완료: 보라색 원판 + 에메랄드색 네온 테두리 아웃라인
+                        dayDiv.innerHTML = `<span class="w-8 h-8 rounded-full bg-indigo-600 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-800 text-white flex items-center justify-center font-black">${day}</span>`;
+                    } else {
+                        // 다른 날 운동 완료: 기본 보라색 원판
+                        dayDiv.innerHTML = `<span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center">${day}</span>`;
+                    }
+                } else {
+                    if (isToday) {
+                        // 오늘 운동 미완료/기록 없음: 채워지지 않은 깔끔한 인디고 굵은 테두리 동그라미로 오늘임을 강조
+                        dayDiv.innerHTML = `<span class="w-8 h-8 rounded-full border-2 border-indigo-400 text-indigo-400 font-bold bg-indigo-500/10 flex items-center justify-center shadow-lg shadow-indigo-500/20">${day}</span>`;
+                    } else {
+                        // 일반 기록 없는 날짜
+                        dayDiv.innerHTML = `<span class="w-8 h-8 flex items-center justify-center text-slate-500">${day}</span>`;
+                    }
+                } 
+                daysContainer.appendChild(dayDiv);
             }
         }
 
